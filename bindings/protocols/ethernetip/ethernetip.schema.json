@@ -9,18 +9,18 @@
     "eipPrimitiveType": {
       "type": "string",
       "enum": [
-        "xsd:BOOL",
-        "xsd:SINT",
-        "xsd:INT",
-        "xsd:DINT",
-        "xsd:LINT",
-        "xsd:USINT",
-        "xsd:UINT",
-        "xsd:UDINT",
-        "xsd:ULINT",
-        "xsd:REAL",
-        "xsd:LREAL",
-        "xsd:STRING"
+        "eipv:BOOL",
+        "eipv:SINT",
+        "eipv:INT",
+        "eipv:DINT",
+        "eipv:LINT",
+        "eipv:USINT",
+        "eipv:UINT",
+        "eipv:UDINT",
+        "eipv:ULINT",
+        "eipv:REAL",
+        "eipv:LREAL",
+        "eipv:STRING"
       ]
     },
     "structureDefinition": {
@@ -54,7 +54,7 @@
         "description": {
           "type": "string"
         },
-        "eip:structureDefinition": {
+        "eipv:structureDefinition": {
           "$ref": "#/definitions/structureDefinition"
         }
       },
@@ -63,11 +63,11 @@
         {
           "required": ["type"],
           "not": {
-            "required": ["eip:structureDefinition"]
+            "required": ["eipv:structureDefinition"]
           }
         },
         {
-          "required": ["eip:structureDefinition"],
+          "required": ["eipv:structureDefinition"],
           "not": {
             "required": ["type"]
           }
@@ -95,13 +95,13 @@
           "type": "integer",
           "minimum": 0
         },
-        "eip:structureDefinition": {
+        "eipv:structureDefinition": {
           "$ref": "#/definitions/structureDefinition"
         }
       },
       "required": ["href", "op"],
       "not": {
-        "required": ["type", "eip:structureDefinition"]
+        "required": ["type", "eipv:structureDefinition"]
       }
     },
     "affordance": {
@@ -126,7 +126,7 @@
       "contains": {
         "type": "object",
         "properties": {
-          "eip": {
+          "eipv": {
             "type": "string",
             "enum": ["https://www.w3.org/2019/wot/eip", "https://www.w3.org/2026/wot/eip"]
           }

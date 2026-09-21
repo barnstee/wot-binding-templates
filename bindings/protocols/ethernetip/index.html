@@ -36,6 +36,12 @@
             publisher: "ODVA",
             date: "2023"
           },
+          "CIP-SECURITY": {
+            title: "CIP Security, Volume 8 of the CIP Networks Library",
+            href: "https://www.odva.org/technology-standards/distinct-cip-services/cip-security/",
+            publisher: "ODVA",
+            date: "2023"
+          },
           "LIBPLCTAG": {
             title: "libplctag - a library for accessing PLC tags",
             href: "https://github.com/libplctag/libplctag",
@@ -138,9 +144,7 @@
         <li>resolves relative Form <code>href</code> values against the Thing Description <code>base</code> URI;</li>
         <li>supports the operation mappings it advertises;</li>
         <li>interprets the declared EtherNet/IP data type correctly; and</li>
-        <li>
-          interprets structured definitions recursively when <code>eip:structureDefinition</code> is present.
-        </li>
+        <li>interprets structured definitions recursively when <code>eipv:structureDefinition</code> is present.</li>
       </ol>
       <p>
         The primitive type and polling interval use the unprefixed Form members <code>type</code> and
@@ -154,8 +158,8 @@
       <section id="endpoint-uri">
         <h3>Endpoint URI</h3>
         <p>An EtherNet/IP endpoint is identified by an <code>eip</code> URI:</p>
-        <pre class="example" title="EtherNet/IP endpoint URI">
-eip://host[:port]
+        <pre class="nohighlight">
+eip-URI = "eip://" host [ ":" port ]
         </pre>
         <p>Where:</p>
         <ul>
@@ -179,15 +183,15 @@ eip://192.168.0.10
       <section id="symbolic-tag-reference">
         <h3>Symbolic Tag Reference</h3>
         <p>The resolved Form target identifies a Logix symbolic tag. The initial binding uses the following shape:</p>
-        <pre class="example" title="Symbolic tag reference">
-eip://host[:port]/tag-path[?element-index]
+        <pre class="nohighlight">
+eip-tag-URI = eip-URI "/" tag-path [ "?" element-index ]
         </pre>
         <p>The <code>tag-path</code> is the controller's symbolic tag expression. Examples include:</p>
         <pre class="example" title="Tag path examples">
 MotorSpeed
 Program:Packaging.Counter
 Mixer.Status.Running
-Recipe[3].SetPoint
+Recipe%5B3%5D.SetPoint
         </pre>
         <p>
           The optional query component identifies an array element. <code>?0</code> describes a scalar or first element.
@@ -205,12 +209,36 @@ Recipe[3].SetPoint
         </p>
       </section>
 
+      <section id="reserved-characters">
+        <h3>Reserved Characters</h3>
+        <p>
+          Logix symbolic tag expressions can contain characters that are reserved in URIs [[RFC3986]], in particular
+          <code>:</code> in program-scoped tag names such as <code>Program:Packaging.Counter</code> and
+          <code>[</code> and <code>]</code> in array subscripts such as <code>Recipe[3].SetPoint</code>.
+        </p>
+        <p>
+          Authors MUST percent-encode any character of a tag path that is not allowed in the path component of a URI
+          reference, and in particular MUST percent-encode <code>[</code> as <code>%5B</code>, <code>]</code> as
+          <code>%5D</code>, <code>?</code> as <code>%3F</code>, and <code>#</code> as <code>%23</code>. Because the tag
+          path is a single path segment, <code>/</code> MUST be percent-encoded as <code>%2F</code> when it is part of a
+          tag name.
+        </p>
+        <p>
+          The characters <code>:</code> and <code>.</code> are allowed in a non-initial path segment and therefore need
+          not be percent-encoded. An implementation MUST percent-decode the tag path before it is used as a symbolic tag
+          expression.
+        </p>
+        <pre class="example" title="Percent-encoded array tag path">
+eip://192.168.0.10/Recipe%5B3%5D.SetPoint
+        </pre>
+      </section>
+
       <section id="route-path">
         <h3>Route Path</h3>
         <p>
           The Logix route path <code>1,0</code> represents a controller reached through the local backplane route. This
           draft does not define a route-path vocabulary term. Implementations requiring configurable CIP routing MAY
-          define an extension such as <code>eip:path</code>, but such an extension is outside the current interoperable
+          define an extension such as <code>eipv:path</code>, but such an extension is outside the current interoperable
           profile.
         </p>
       </section>
@@ -218,15 +246,16 @@ Recipe[3].SetPoint
 
     <section id="vocabulary">
       <h2>EtherNet/IP Vocabulary</h2>
-      <p>The examples use the prefix <code>eip</code> for the provisional namespace:</p>
+      <p>
+        The examples use the prefix <code>eipv</code> for the provisional namespace. The prefix intentionally differs
+        from the <code>eip</code> URI scheme name so that vocabulary terms are not confused with the scheme.
+      </p>
       <pre class="example json" title="Vocabulary prefix">
 {
-  "eip": "https://www.w3.org/2026/wot/eip"
+  "eipv": "https://www.w3.org/2026/wot/eip"
 }
       </pre>
-      <p>
-        The namespace URI is provisional. It does not imply that a vocabulary is published at that location.
-      </p>
+      <p>The namespace URI is provisional. It does not imply that a vocabulary is published at that location.</p>
 
       <section id="form-terms">
         <h3>Form Terms</h3>
@@ -265,7 +294,7 @@ Recipe[3].SetPoint
               <td>Non-negative integer</td>
             </tr>
             <tr>
-              <td><code>eip:structureDefinition</code></td>
+              <td><code>eipv:structureDefinition</code></td>
               <td>Recursive definition of a structured Logix tag or UDT.</td>
               <td>required for structured tags</td>
               <td>Object defined in <a href="#structured-type-definition">Structured Type Definition</a></td>
@@ -273,81 +302,99 @@ Recipe[3].SetPoint
           </tbody>
         </table>
         <p>
-          A Form MUST NOT contain both a primitive <code>type</code> and an <code>eip:structureDefinition</code>.
-          Primitive tags use <code>type</code>, while UDT tags use <code>eip:structureDefinition</code>.
+          A Form MUST NOT contain both a primitive <code>type</code> and an <code>eipv:structureDefinition</code>.
+          Primitive tags use <code>type</code>, while UDT tags use <code>eipv:structureDefinition</code>.
         </p>
       </section>
 
       <section id="primitive-data-types">
         <h3>Primitive Data Types</h3>
-        <p>The binding uses XML Schema-style compact identifiers for Logix primitive types.</p>
+        <p>
+          The binding identifies Logix primitive types with terms from the EtherNet/IP vocabulary. The type names are
+          the CIP and Logix type names; they are not XML Schema datatypes. The third column lists the closest XML Schema
+          built-in datatype [[XMLSCHEMA11-2]] for authors who need one, and the fourth column gives the recommended WoT
+          Data Schema.
+        </p>
         <table class="def">
           <thead>
             <tr>
               <th>Value</th>
               <th>Logix type</th>
+              <th>Closest XML Schema datatype</th>
               <th>WoT Data Schema recommendation</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><code>xsd:BOOL</code></td>
+              <td><code>eipv:BOOL</code></td>
               <td>Boolean</td>
+              <td><code>xsd:boolean</code></td>
               <td><code>boolean</code></td>
             </tr>
             <tr>
-              <td><code>xsd:SINT</code></td>
+              <td><code>eipv:SINT</code></td>
               <td>Signed 8-bit integer</td>
+              <td><code>xsd:byte</code></td>
               <td><code>integer</code>, minimum -128, maximum 127</td>
             </tr>
             <tr>
-              <td><code>xsd:INT</code></td>
+              <td><code>eipv:INT</code></td>
               <td>Signed 16-bit integer</td>
+              <td><code>xsd:short</code></td>
               <td><code>integer</code>, minimum -32768, maximum 32767</td>
             </tr>
             <tr>
-              <td><code>xsd:DINT</code></td>
+              <td><code>eipv:DINT</code></td>
               <td>Signed 32-bit integer</td>
+              <td><code>xsd:int</code></td>
               <td><code>integer</code>, minimum -2147483648, maximum 2147483647</td>
             </tr>
             <tr>
-              <td><code>xsd:LINT</code></td>
+              <td><code>eipv:LINT</code></td>
               <td>Signed 64-bit integer</td>
+              <td><code>xsd:long</code></td>
               <td><code>integer</code></td>
             </tr>
             <tr>
-              <td><code>xsd:USINT</code></td>
+              <td><code>eipv:USINT</code></td>
               <td>Unsigned 8-bit integer</td>
+              <td><code>xsd:unsignedByte</code></td>
               <td><code>integer</code>, minimum 0, maximum 255</td>
             </tr>
             <tr>
-              <td><code>xsd:UINT</code></td>
+              <td><code>eipv:UINT</code></td>
               <td>Unsigned 16-bit integer</td>
+              <td><code>xsd:unsignedShort</code></td>
               <td><code>integer</code>, minimum 0, maximum 65535</td>
             </tr>
             <tr>
-              <td><code>xsd:UDINT</code></td>
+              <td><code>eipv:UDINT</code></td>
               <td>Unsigned 32-bit integer</td>
+              <td><code>xsd:unsignedInt</code></td>
               <td><code>integer</code>, minimum 0</td>
             </tr>
             <tr>
-              <td><code>xsd:ULINT</code></td>
+              <td><code>eipv:ULINT</code></td>
               <td>Unsigned 64-bit integer</td>
+              <td><code>xsd:unsignedLong</code></td>
               <td><code>integer</code>, minimum 0</td>
             </tr>
             <tr>
-              <td><code>xsd:REAL</code></td>
+              <td><code>eipv:REAL</code></td>
               <td>IEEE 754 single-precision floating point</td>
+              <td><code>xsd:float</code></td>
               <td><code>number</code></td>
             </tr>
             <tr>
-              <td><code>xsd:LREAL</code></td>
+              <td><code>eipv:LREAL</code></td>
               <td>IEEE 754 double-precision floating point</td>
+              <td><code>xsd:double</code></td>
               <td><code>number</code></td>
             </tr>
             <tr>
-              <td><code>xsd:STRING</code></td>
+              <td><code>eipv:STRING</code></td>
               <td>Logix string value</td>
+              <td><code>xsd:string</code></td>
               <td><code>string</code></td>
             </tr>
           </tbody>
@@ -357,7 +404,7 @@ Recipe[3].SetPoint
 
       <section id="structured-type-definition">
         <h3>Structured Type Definition</h3>
-        <p><code>eip:structureDefinition</code> describes a Logix UDT and has the following members:</p>
+        <p><code>eipv:structureDefinition</code> describes a Logix UDT and has the following members:</p>
         <table class="def">
           <thead>
             <tr>
@@ -418,7 +465,7 @@ Recipe[3].SetPoint
               <td>string</td>
             </tr>
             <tr>
-              <td><code>eip:structureDefinition</code></td>
+              <td><code>eipv:structureDefinition</code></td>
               <td>Nested UDT definition.</td>
               <td>required for nested UDT fields</td>
               <td>structure-definition object</td>
@@ -426,23 +473,23 @@ Recipe[3].SetPoint
           </tbody>
         </table>
         <p>
-          A field MUST use either <code>type</code> for a primitive field or <code>eip:structureDefinition</code> for a
+          A field MUST use either <code>type</code> for a primitive field or <code>eipv:structureDefinition</code> for a
           nested UDT field. A consumer MUST process nested structure definitions recursively.
         </p>
         <pre class="example json" title="Structure definition">
 {
-  "eip:structureDefinition": {
+  "eipv:structureDefinition": {
     "typeName": "MotorStatus",
     "fields": [
       {
         "name": "Running",
-        "type": "xsd:BOOL",
+        "type": "eipv:BOOL",
         "offset": 0,
         "description": "Indicates whether the motor is running"
       },
       {
         "name": "Speed",
-        "type": "xsd:REAL",
+        "type": "eipv:REAL",
         "offset": 4,
         "description": "Actual motor speed"
       }
@@ -471,14 +518,14 @@ Recipe[3].SetPoint
               <td><code>readproperty</code></td>
               <td>
                 Read the symbolic tag and decode the returned value according to <code>type</code> or
-                <code>eip:structureDefinition</code>.
+                <code>eipv:structureDefinition</code>.
               </td>
               <td>The Form MUST identify a readable tag.</td>
             </tr>
             <tr>
               <td><code>writeproperty</code></td>
               <td>
-                Encode the supplied value according to <code>type</code> or <code>eip:structureDefinition</code> and
+                Encode the supplied value according to <code>type</code> or <code>eipv:structureDefinition</code> and
                 write it to the symbolic tag.
               </td>
               <td>The property MUST NOT be declared <code>readOnly: true</code>.</td>
@@ -498,8 +545,8 @@ Recipe[3].SetPoint
         </table>
         <p>
           The initial binding does not define a native EtherNet/IP subscription mechanism. An implementation MAY realize
-          <code>observeproperty</code> by polling. It SHOULD use <code>pollingTime</code> when supplied and MAY enforce a
-          minimum interval to protect the controller and network.
+          <code>observeproperty</code> by polling. It SHOULD use <code>pollingTime</code> when supplied and MAY enforce
+          a minimum interval to protect the controller and network.
         </p>
       </section>
 
@@ -516,23 +563,6 @@ Recipe[3].SetPoint
           A Thing Description conforming to the profile MUST NOT advertise those operations on an <code>eip</code> Form
           unless it also declares and documents an additional binding extension.
         </p>
-      </section>
-
-      <section id="read-write-only">
-        <h3>Read-only and Write-only Properties</h3>
-        <ul>
-          <li>
-            If a tag is not writable, its Property affordance MUST set <code>readOnly</code> to <code>true</code> and
-            MUST NOT advertise <code>writeproperty</code>.
-          </li>
-          <li>
-            If a tag is not readable, its Property affordance SHOULD set <code>writeOnly</code> to <code>true</code> and
-            MUST NOT advertise <code>readproperty</code> or <code>observeproperty</code>.
-          </li>
-          <li>
-            If a tag supports polling, its Property affordance SHOULD set <code>observable</code> to <code>true</code>.
-          </li>
-        </ul>
       </section>
     </section>
 
@@ -556,7 +586,7 @@ Recipe[3].SetPoint
         <h3>Structured Values</h3>
         <p>
           A structured Logix tag is represented to the WoT Consumer as a JSON object. Field names in the object
-          correspond to the <code>name</code> members in <code>eip:structureDefinition.fields</code>.
+          correspond to the <code>name</code> members in <code>eipv:structureDefinition.fields</code>.
         </p>
         <pre class="example json" title="Application-facing value">
 {
@@ -586,8 +616,47 @@ Recipe[3].SetPoint
         Description MUST accurately describe the security applied to the interaction endpoint.
       </p>
       <p>
+        ODVA specifies security services for CIP and EtherNet/IP in CIP Security [[CIP-SECURITY]], published as Volume 8
+        of the CIP Networks Library. The following profiles are relevant to explicit messaging as used by this binding:
+      </p>
+      <ul>
+        <li>
+          the EtherNet/IP Confidentiality Profile, which protects explicit messaging with TLS (for TCP) and DTLS (for
+          UDP), providing endpoint authentication, message integrity, and encryption;
+        </li>
+        <li>
+          the EtherNet/IP IEEE 802.1X Profile, which provides device-level network access control and device identity;
+        </li>
+        <li>
+          the CIP Authorization Profile, which uses JSON Web Tokens to authorize access to CIP objects and services; and
+        </li>
+        <li>
+          the CIP User Authentication Profile, which authenticates users and issues the tokens consumed by the CIP
+          Authorization Profile.
+        </li>
+      </ul>
+      <p>
+        These services are implemented by shipping products, including Rockwell Automation Logix-family controllers and
+        their EtherNet/IP communication modules. Support depends on the product family and firmware revision, so an
+        implementation cannot assume that a given controller offers them.
+      </p>
+      <p>
+        When an endpoint is protected by the EtherNet/IP Confidentiality Profile, the Thing Description SHOULD describe
+        the corresponding credentials with a WoT security scheme that matches the deployed configuration, for example a
+        certificate-based scheme for TLS mutual authentication, or a token-based scheme when the CIP Authorization
+        Profile is used. The examples in this document use <code>nosec</code> only because they describe controllers
+        that are deployed without CIP Security; <code>nosec</code> MUST NOT be used to describe a CIP Security-protected
+        endpoint.
+      </p>
+      <p>
         A binding implementation MUST NOT infer that <code>nosec</code> authorizes access. Authorization remains a
         deployment responsibility.
+      </p>
+      <p class="note" title="Open issue">
+        This binding does not yet define vocabulary terms for selecting CIP Security profiles or for carrying
+        profile-specific parameters in a Form. The mapping between the CIP Security profiles listed above and the WoT
+        security schemes is expected to be refined as implementation experience with CIP Security-enabled controllers is
+        collected.
       </p>
     </section>
 
@@ -601,8 +670,7 @@ Recipe[3].SetPoint
   "@context": [
     "https://www.w3.org/2022/wot/td/v1.1",
     {
-      "eip": "https://www.w3.org/2019/wot/eip",
-      "xsd": "http://www.w3.org/2001/XMLSchema#"
+      "eipv": "https://www.w3.org/2019/wot/eip"
     }
   ],
   "id": "urn:example:logix:controller1",
@@ -624,7 +692,7 @@ Recipe[3].SetPoint
         {
           "href": "MotorSpeed?0",
           "op": ["readproperty", "observeproperty", "writeproperty"],
-          "type": "xsd:REAL",
+          "type": "eipv:REAL",
           "pollingTime": 1000
         }
       ]
@@ -644,9 +712,9 @@ Recipe[3].SetPoint
     "observable": true,
     "forms": [
       {
-        "href": "Program:Packaging.Counter?0",
+        "href": "Program:Packaging.Counter",
         "op": ["readproperty", "observeproperty"],
-        "type": "xsd:DINT",
+        "type": "eipv:DINT",
         "pollingTime": 2000
       }
     ]
@@ -680,33 +748,33 @@ Recipe[3].SetPoint
           "href": "LineState",
           "op": ["readproperty", "observeproperty", "writeproperty"],
           "pollingTime": 1000,
-          "eip:structureDefinition": {
+          "eipv:structureDefinition": {
             "typeName": "LineStateType",
             "fields": [
               {
                 "name": "Running",
-                "type": "xsd:BOOL",
+                "type": "eipv:BOOL",
                 "offset": 0
               },
               {
                 "name": "Speed",
-                "type": "xsd:REAL",
+                "type": "eipv:REAL",
                 "offset": 4
               },
               {
                 "name": "Drive",
                 "offset": 8,
-                "eip:structureDefinition": {
+                "eipv:structureDefinition": {
                   "typeName": "DriveStateType",
                   "fields": [
                     {
                       "name": "Current",
-                      "type": "xsd:REAL",
+                      "type": "eipv:REAL",
                       "offset": 0
                     },
                     {
                       "name": "FaultCode",
-                      "type": "xsd:DINT",
+                      "type": "eipv:DINT",
                       "offset": 4
                     }
                   ]
